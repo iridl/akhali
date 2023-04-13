@@ -1,2 +1,2 @@
 # akhali
-Prototype Maproom Library
+Prototype Maproom Library (ახალი "akhali" is the Georgian word for "new")
