@@ -36,6 +36,8 @@ class InvalidDefault(Exception):
 class MaproomException(Exception):
     pass
 
+class MaproomError(Exception):
+    pass
 
 
 class Maproom:
@@ -108,21 +110,12 @@ class Maproom:
 
 
     class _Month(_Control):
-        FULL = [ 'january', 'february', 'march', 'april', 'may',
-                 'june', 'july', 'august', 'september', 'october',
-                 'november', 'december' ]
         ABBR = [ 'jan', 'feb', 'mar', 'apr', 'may', 'jun',
                  'jul', 'aug', 'sep', 'oct', 'nov', 'dec' ]
 
         def __init__(self, maproom, id, default, block, label):
-            self.default = default.lower()
-            if self.default in Maproom._Month.FULL:
-                self.default = default_mon[0:3]
-            elif self.default in Maproom._Month.ABBR:
-                pass
-            else:
+            if self.default no in Maproom._Month.ABBR:
                 raise InvalidDefault(default)
-
             super().__init__(maproom, id, block, label)
 
         def render(self):
