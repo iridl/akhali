@@ -1,45 +1,29 @@
 from maproom import Maproom
 
 mr = Maproom(
-    title = "Monthly Climatology",
-    prefix = "monthly",
+    title = "Example Maproom",
+    prefix = "example",
 )
 
-# - finish number
-# - finish output
-# _ margins
-# add test data
-# hiding system
-# put on github
-# adjust names
-# convert to example
-# no main?
-
 mr.controls.group("First Group")
-mr.controls.month(id="m0")
-mr.controls.label("foo")
-mr.controls.month(id="m1")
-mr.controls.text(id="t1")
-
-mr.controls.group("Second Group")
-mr.controls.select(id="s0", options=["ABC", "XYZ"], default="XYZ")
+mr.controls.month(id="mon0")
 mr.controls.number(id="num0", min=0, max=100, default=50)
 
 def hider(num0):
     return num0 >= 50
 
-mr.controls.group("Third Group", display=hider)
+mr.controls.group("Second Group", display=hider)
 mr.controls.label("Hello, World!")
 
-def nothing(s0, m0, m1):
-    return s0 + m0 + m1
+def output0(mon0):
+    return mon0
 
-def nothing2(m0, m1):
-    return m0 + m1
+def output1(mon0, num0):
+    return mon0 + str(num0)
 
 mr.plots.group("First Tab")
-mr.plots.output("Out1", nothing)
-mr.plots.output("Out2", nothing2)
+mr.plots.output("First Output", output0)
+mr.plots.output("Second Output", output1)
 
 mr.plots.group("Second Tab")
 
