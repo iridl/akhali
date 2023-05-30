@@ -1,39 +1,47 @@
 from akhali import Maproom
 
-monthly = Maproom(
+mr = Maproom(
     title = "Monthly Climatology",
     prefix = "monthly",
 )
 
-monthly.tab(id="tab1", label="First Tab")
-monthly.tab(id="tab2", label="Second Tab")
-monthly.tab(id="tab3", label="Third Tab")
+# - finish number
+# - finish output
+# _ margins
+# add test data
+# hiding system
+# put on github
+# adjust names
+# convert to example
+# no main?
 
-monthly.block(id="block1", label="First Block")
-monthly.block(id="block2", label="Second Block")
+mr.controls.group("First Group")
+mr.controls.month(id="m0")
+mr.controls.label("foo")
+mr.controls.month(id="m1")
+mr.controls.text(id="t1")
 
-monthly.text("This is some text", block="block1")
-monthly.text("...and so is this", block="block2")
+mr.controls.group("Second Group")
+mr.controls.select(id="s0", options=["ABC", "XYZ"], default="XYZ")
+mr.controls.number(id="num0", min=0, max=100, default=50)
 
-monthly.month(id="mon0", block="block2")
-monthly.month(id="mon1", label="Separate Month")
+def hider(num0):
+    return num0 >= 50
 
+mr.controls.group("Third Group", display=hider)
+mr.controls.label("Hello, World!")
 
-monthly.text("...This is more text", block="block2")
+def nothing(s0, m0, m1):
+    return s0 + m0 + m1
 
-monthly.select(id="sel0", options=["ABC", "XYZ"],
-               default="XYZ", block="block2")
+def nothing2(m0, m1):
+    return m0 + m1
 
-monthly.data(id="enacts", path="./zarr")
+mr.plots.group("First Tab")
+mr.plots.output("Out1", nothing)
+mr.plots.output("Out2", nothing2)
 
-def climatology(data, inputs):
-    return None
-
-monthly.layer(label="Monthly Climatology",
-              data="enacts",
-              inputs=["mon1", "mon1"],
-              function=climatology)
-
+mr.plots.group("Second Tab")
 
 if __name__ == "__main__":
-    monthly.start()
+    mr.start()

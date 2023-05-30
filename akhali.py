@@ -7,84 +7,40 @@ import dash_leaflet as dlf
 from pathlib import Path
 from inspect import signature, Parameter
 from collections import OrderedDict
-import uuid
+from common import MaproomException, IDRegistry, gensym
+from controls import Controls, Plots
 
-class IdAlreadyInUse(Exception):
-    pass
-
-class UndefinedId(Exception):
-    pass
-
-class WrongKind(Exception):
-    pass
-
-class DataNotDefined(Exception):
-    pass
-
-class ControlNotDefined(Exception):
-    pass
-
-class InvalidControlElement(Exception):
-    pass
-
-class InvalidComputeFunction(Exception):
-    pass
-
-class InvalidDefault(Exception):
-    pass
-
-class MaproomException(Exception):
-    pass
-
-class MaproomError(Exception):
-    pass
-
+def wrapper(f, prop):
+    def wrapper(*args):
+        result = f(*args)
+        print(result)
+        if result:
+            return {}
+        else:
+            return { 'display': None }
+    if prop == "hidden":
+        return wrapper
+    else:
+        return f
 
 class Maproom:
-    def __init__(self, title, prefix):
+    def __init__(self, title, prefix, auto=False):
         self.title = title
         self.prefix = prefix
+        self.auto = auto
 
         # private
-        self._ids_in_use = dict()
+        self._ids = IDRegistry()
         self._data_sets = dict()
-        self._tabs = OrderedDict()
-        self._blocks = OrderedDict()
+        self._callbacks = []
+
+        self.controls = Controls(self._ids)
+        self.plots = Plots(self._ids, self._callbacks)
         self._layers = []
-
-    # private methods
-    def _add_id(self, id, kind):
-        if id in self._ids_in_use.keys():
-            raise IdAlreadyInUse(id)
-        else:
-            self._ids_in_use[id] = kind
-
-    def _validate_id(self, id, kind):
-        if id not in self._ids_in_use.keys():
-            raise UndefinedId(id, kind)
-        elif self._ids_in_use[id] != kind:
-            raise WrongKind(id, self._ids_in_use[id], kind)
-        else:
-            pass
-
-    def _add_component(self, ctrl, block, label):
-        if block is not None and label is not None:
-            raise MaproomException("control must be added to a block or labeled")
-        elif block is not None and label is None:
-            self._validate_id(block, "block")
-            self._blocks[block]['content'].append(ctrl)
-        elif block is None and label is not None:
-            self._blocks[str(uuid.uuid4())] = {
-                'label': label,
-                'content': [ ctrl ],
-            }
-        else:
-            raise MaproomException("no label or block specified")
-
 
     # public methods
     def data(self, id, path):
-        self._add_id(id, "data")
+        self._ids.add(id, "data")
         self._data_sets[id] = Path(path)
 
     def tab(self, id, label):
@@ -93,78 +49,6 @@ class Maproom:
             'label': label,
             'content': []
         }
-
-    def block(self, id, label):
-        self._add_id(id, "block")
-        self._blocks[id] = {
-            'label': label,
-            'content': []
-        }
-
-    class _Control:
-        def __init__(self, maproom, id, block, label):
-            self.maproom = maproom
-            self.id = id
-            self.maproom._add_id(id, "control")
-            self.maproom._add_component(self, block, label)
-
-
-    class _Month(_Control):
-        ABBR = [ 'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-                 'jul', 'aug', 'sep', 'oct', 'nov', 'dec' ]
-
-        def __init__(self, maproom, id, default, block, label):
-            if self.default no in Maproom._Month.ABBR:
-                raise InvalidDefault(default)
-            super().__init__(maproom, id, block, label)
-
-        def render(self):
-            return dbc.Select(
-                id=self.id, value=self.default, size="sm",
-                className="m-1 d-inline-block w-auto", options=[
-                    {"label": "January", "value": "jan"},
-                    {"label": "February", "value": "feb"},
-                    {"label": "March", "value": "mar"},
-                    {"label": "April", "value": "apr"},
-                    {"label": "May", "value": "may"},
-                    {"label": "June", "value": "jun"},
-                    {"label": "July", "value": "jul"},
-                    {"label": "August", "value": "aug"},
-                    {"label": "September", "value": "sep"},
-                    {"label": "October", "value": "oct"},
-                    {"label": "November", "value": "nov"},
-                    {"label": "December", "value": "dec"},
-                ])
-
-    class _Select(_Control):
-        def __init__(self, maproom, id, options, default, block, label):
-            self.options = options
-            if default is None:
-                self.default= options[0]
-            elif default not in options:
-                raise InvalidDefault(default)
-            else:
-                self.default = default
-
-            super().__init__(maproom, id, block, label)
-
-        def render(self):
-            return dbc.Select(
-                id=self.id, value=self.default, size="sm",
-                className="m-1 d-inline-block w-auto",
-                options=[ { 'label': o, 'value': o } for o in self.options ]
-            )
-
-
-    # components
-    def text(self, txt, block):
-        self._add_component(txt, block, None)
-
-    def month(self, id, default='jan', block=None, label=None):
-        Maproom._Month(self, id, default, block, label)
-
-    def select(self, id, options, default=None, block=None, label=None):
-        Maproom._Select(self, id, options, default, block, label)
 
     def layer(self, label, data, inputs, function):
         self._validate_id(data, "data")
@@ -202,16 +86,7 @@ class Maproom:
         APP.layout = dbc.Container([
             dbc.Row(html.H1(self.title)),
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader(v['label']),
-                        dbc.CardBody([
-                            c.render() if isinstance(c, Maproom._Control) else c
-                            for c in v['content']
-                        ]),
-                    ], className="mb-4 ml-4 mr-4")
-                    for _, v in self._blocks.items()
-                ], width=3),
+                dbc.Col(self.controls.render(), width=3),
                 dbc.Col([
                     dbc.Row(dlf.Map([
                         dlf.LayersControl([
@@ -239,14 +114,21 @@ class Maproom:
                                 checked=True,
                             ),
                         ]),
-                    ], style={'width': '100%', 'height': '500px' })),
-                    dbc.Row(dbc.Tabs([
-                        dbc.Tab(t['content'], label=t['label'])
-                        for _, t in self._tabs.items()
-                    ])),
+                    ], style={'width': '100%', 'height': '500px',
+                              'margin-bottom': '10px',
+                              })),
+                    dbc.Row(self.plots.render()),
                 ], width=9),
             ])
         ], style={ 'height': '100vh' }, fluid=True)
+        for c in self._callbacks:
+            APP.callback(
+                output=Output(c['output'], c["prop"]),
+                inputs={
+                    p: Input(p, "value")
+                    for p in signature(c['function']).parameters.keys()
+                }
+            )(wrapper(c['function'], c['prop']))
         return APP
 
 
