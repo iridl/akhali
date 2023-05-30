@@ -1,4 +1,4 @@
-from akhali import Maproom
+from maproom import Maproom
 
 mr = Maproom(
     title = "Monthly Climatology",
