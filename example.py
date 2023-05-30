@@ -7,16 +7,17 @@ mr = Maproom(
 
 mr.controls.group("First Group")
 mr.controls.month(id="mon0")
+mr.controls.text(id="txt0")
 mr.controls.number(id="num0", min=0, max=100, default=50)
 
-def hider(num0):
-    return num0 >= 50
+def hider(txt0):
+    return txt0 != "hide"
 
 mr.controls.group("Second Group", display=hider)
 mr.controls.label("Hello, World!")
 
-def output0(mon0):
-    return mon0
+def output0(mon0, txt0):
+    return mon0 + txt0
 
 def output1(mon0, num0):
     return mon0 + str(num0)

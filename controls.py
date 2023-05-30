@@ -150,8 +150,8 @@ class Groups:
 
 
 class Controls(Groups):
-    def __init__(self, ids):
-        super().__init__(ids)
+    def __init__(self, ids, callbacks):
+        super().__init__(ids, callbacks)
 
     def group(self, title, display=None):
         id = str(uuid.uuid4())
