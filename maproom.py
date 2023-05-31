@@ -7,30 +7,8 @@ import dash_leaflet as dlf
 from pathlib import Path
 from inspect import signature, Parameter
 from collections import OrderedDict
-from common import MaproomException, IDRegistry, gensym
+from common import MaproomException, IDRegistry, gensym, inverter
 from controls import Controls, Plots
-
-def wrapper(f, prop):
-    def wrapped(*args, **kwargs):
-        result = f(*args, **kwargs)
-        print(result)
-        if not result:
-            return {}
-        else:
-            return { 'display': None }
-    if prop == "hidden":
-        return wrapped
-    else:
-        return f
-
-def wrapper2(f, prop):
-    def wrapped(*args, **kwargs):
-        result = f(*args, **kwargs)
-        return not result
-    if prop == "hidden":
-        return wrapped
-    else:
-        return f
 
 class Maproom:
     def __init__(self, title, prefix, auto=False):
@@ -130,7 +108,6 @@ class Maproom:
                 ], width=9),
             ])
         ], style={ 'height': '100vh' }, fluid=True)
-        print(self._callbacks)
         for c in self._callbacks:
             APP.callback(
                 output=Output(c['output'], c["prop"]),
@@ -138,9 +115,7 @@ class Maproom:
                     p: Input(p, "value")
                     for p in signature(c['function']).parameters.keys()
                 }
-            )(wrapper2(c['function'], c['prop']))
-            # )(c['function'])
-            # )(wrapper(c['function'], c['prop']))
+            )(c['function'] if c['prop'] != "hidden" else inverter(c['function']))
         return APP
 
 
