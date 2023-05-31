@@ -30,3 +30,11 @@ def dict_to_options(d):
         { 'label': k, 'value': v }
         for k, v in d.items()
     ]
+
+def inverter(f):
+    def wrapped(*args, **kwargs):
+        result = f(*args, **kwargs)
+        if type(result) is not bool:
+            raise MaproomException("Did not return truth value")
+        return not result
+    return wrapped

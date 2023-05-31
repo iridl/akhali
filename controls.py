@@ -62,12 +62,16 @@ class Select(Control):
 class Number(Control):
     def __init__(self, id, min, max, step, default):
         if (min is None) or (max is None):
-            self.default = default
+            if default is not None:
+                self.default = default
+            else:
+                self.default = 0
         elif max < min:
             raise MaproomException("upper bound of number must be higher than lower")
+            raise MaproomException("max must be higher than min")
         else:
             if default is None:
-                self.default = self.min
+                self.default = min
             elif default < min or default > max:
                 raise MaproomException("invalid default value")
             else:
