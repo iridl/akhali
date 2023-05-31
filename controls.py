@@ -18,18 +18,25 @@ class Control:
 
 class Month(Control):
     MONTHS = OrderedDict([
-        (m,  m[0:3].lower())
-        for m in [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December',
-        ]
+        ("January", 1),
+        ("February", 2),
+        ("March", 3),
+        ("April", 4),
+        ("May", 5),
+        ("June", 6),
+        ("July", 7),
+        ("August", 8),
+        ("September", 9),
+        ("October", 10),
+        ("November", 11),
+        ("December", 12),
     ])
 
     def __init__(self, id, default):
-        if default not in self.MONTHS.values():
-            raise MaproomException(f"`{default}` is not a valid three-letter month name")
+        if default not in self.MONTHS.keys():
+            raise MaproomException(f"`{default}` is not a valid month name")
         else:
-            self.default = default
+            self.default = self.MONTHS[default]
         super().__init__(id)
 
     def render(self):
@@ -116,7 +123,7 @@ class Output(Control):
 
 
 class Groups:
-    def __init__(self, ids, callbacks=[]):
+    def __init__(self, ids, callbacks=None):
         self._ids = ids
         self._groups = []
         self._callbacks = callbacks
@@ -143,12 +150,6 @@ class Groups:
                 self._ids.add(elem.id, elem.KIND)
             self._groups[-1]['content'].append(elem)
 
-    def _add_callback(self, function, output, prop):
-        self._callbacks.append({ 'function': function,
-                                 'output': output,
-                                 'prop': prop
-                                })
-
     def label(self, txt):
         self._add_element(txt)
 
@@ -166,10 +167,10 @@ class Controls(Groups):
             for p in signature(display).parameters.keys():
                 self._ids.validate(p, Control.KIND)
 
-            self._add_callback(display, id, "hidden")
+            self._callbacks.add(display, id, "hidden")
         super().group(title, id)
 
-    def month(self, id, default='jan'):
+    def month(self, id, default='January'):
         self._add_element(Month(id, default))
 
     def select(self, id, options, default=None):
@@ -215,10 +216,10 @@ class Plots(Groups):
             raise MaproomException("Did not pass a function")
 
         for p in signature(function).parameters.keys():
-            self._ids.validate(p, Control.KIND)
+            self._ids.validate(p, {"marker", Control.KIND})
 
         self._add_element(Output(id, title))
-        self._add_callback(function, id, "children")
+        self._callbacks.add(function, id, "children")
 
     def render(self):
         return dbc.Tabs([
