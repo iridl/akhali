@@ -7,8 +7,11 @@ import dash_leaflet as dlf
 from pathlib import Path
 from inspect import signature, Parameter
 from collections import OrderedDict
-from common import MaproomException, IDRegistry, gensym, inverter
+
+from common import MaproomException, IDRegistry, CallbackRegistry, gensym, inverter, tile_url, tile_wrap
+import controls
 from controls import Controls, Plots
+import uuid
 
 class Maproom:
     def __init__(self, title, prefix, auto=False):
@@ -19,43 +22,35 @@ class Maproom:
         # private
         self._ids = IDRegistry()
         self._data_sets = dict()
-        self._callbacks = []
+        self._callbacks = CallbackRegistry()
 
         self.controls = Controls(self._ids, self._callbacks)
         self.plots = Plots(self._ids, self._callbacks)
+        self._markers = []
         self._layers = []
 
-    # public methods
-    def data(self, id, path):
-        self._ids.add(id, "data")
-        self._data_sets[id] = Path(path)
+    def marker(self, id, position):
+        self._ids.add(id, "marker")
+        self._markers.append([id, position])
 
-    def tab(self, id, label):
-        self._add_id(id, "tab")
-        self._tabs[id] = {
-            'label': label,
-            'content': []
-        }
-
-    def layer(self, label, data, inputs, function):
-        self._validate_id(data, "data")
-
-        for i in inputs:
-            self._validate_id(i, "control")
-
+    def layer(self, label, function, data):
         if not callable(function):
-            raise InvalidComputeFunction
+            raise MaproomException("Did not pass a function")
 
-        sig = signature(function)
-        # can be more precise than this
-        if not(list(sig.parameters.keys()) == ['data', 'inputs']):
-            raise InvalidComputeFunction
+        params = list(signature(function).parameters.keys())
+        if params[0] != "data":
+            raise MaproomException("First argument of function must be `data`")
+
+        params = params[1:]
+        for p in params:
+            self._ids.validate(p, {"marker", controls.Control.KIND})
 
         self._layers.append({
             'label': label,
-            'data': data,
-            'inputs': inputs,
+            'id': str(uuid.uuid4()),
             'function': function,
+            'params': params,
+            'data': data,
         })
 
 
@@ -93,29 +88,55 @@ class Maproom:
                                 name="Topo",
                                 checked=False,
                             ),
+                        ] + [
                             dlf.Overlay(
                                 dlf.TileLayer(
-                                    id="map_raster",
+                                    id=l['id'],
                                 ),
-                                name="Raster",
-                                checked=True,
-                            ),
+                                name=l['label'],
+                                checked=False,
+                            )
+                            for l in self._layers
                         ]),
-                    ], style={'width': '100%', 'height': '500px',
-                              'margin-bottom': '10px',
-                              })),
+                        dlf.LayerGroup([
+                            dlf.Marker(id=m[0], position=m[1], draggable=True)
+                            for m in self._markers
+                        ]),
+                    ], id="__map", center=[-29.6100, 28.2336],
+                    style={'width': '100%', 'height': '500px',
+                           'margin-bottom': '10px',
+                    })),
                     dbc.Row(self.plots.render()),
                 ], width=9),
             ])
         ], style={ 'height': '100vh' }, fluid=True)
-        for c in self._callbacks:
+        for c in self._callbacks.defs:
             APP.callback(
                 output=Output(c['output'], c["prop"]),
                 inputs={
-                    p: Input(p, "value")
+                    p: Input(p, "position" if self._ids.kind(p) == "marker" else "value")
                     for p in signature(c['function']).parameters.keys()
                 }
             )(c['function'] if c['prop'] != "hidden" else inverter(c['function']))
+
+        # if len(self._markers) > 1:
+        #     APP.callback(
+        #         Output(self._markers[0][0], "position"),
+        #         Input("__map", "click_lat_lng"),
+        #     )(lambda x: self._markers[0][1] if x is None else x)
+
+        for i, l in enumerate(self._layers):
+            APP.callback(
+                output=Output(l['id'], 'url'),
+                inputs={
+                    p: Input(p, "value")
+                    for p in l['params']
+                }
+            )(tile_url(f"tile-{i}"))
+
+            server.route(f"/tile-{i}/<int:tz>/<int:tx>/<int:ty>")(
+                tile_wrap(l['data'], l['function'])
+            )
         return APP
 
 

@@ -1,0 +1,34 @@
+package:
+  name: "akhali"
+  version: "0.0.1"
+
+source:
+  path: ..
+
+build:
+  number: 0
+  noarch: python
+
+requirements:
+  host:
+    - python
+    - setuptools
+  build:
+    - python
+  run:
+    - python>=3.9
+    - dash
+    - dash-leaflet
+    - dash-bootstrap-components
+    - netCDF4
+    - xarray
+
+about:
+  home: https://github.com/kgraaf/akhali
+  license: BSD
+  license_familY: BSD
+  summary: "IRI Maprooms"
+
+extra:
+  recipe-maintainers:
+    - kgraaf
