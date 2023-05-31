@@ -3,8 +3,11 @@ package:
   version: "0.0.1"
 
 source:
-  git_rev: v0.0.1
-  git_url: https://github.com/kgraaf/akhali
+  path: ..
+
+build:
+  number: 0
+  noarch: python
 
 requirements:
   host:
